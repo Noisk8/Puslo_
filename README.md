@@ -1,5 +1,10 @@
 # PULSO — BPM + Sound Meter
 
+<img width="1297" height="672" alt="imagen" src="https://github.com/user-attachments/assets/d241411b-7a06-4707-bd1b-1ccd473eea1f" />
+
+<img width="1297" height="672" alt="imagen" src="https://github.com/user-attachments/assets/2ef7f9f5-54e4-44ce-9b48-48bc57170bdc" />
+
+
 Instrumento web de tempo y nivel sonoro con interfaz de terminal retro: fondo carbón, fósforo verde, detalles ámbar y lecturas monoespaciadas. React + TypeScript estricto + Vite, sin backend. No hay datos de demostración en la aplicación.
 
 ## Ejecutar
