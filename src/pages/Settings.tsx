@@ -156,15 +156,35 @@ export function Settings({
         </fieldset>
         <fieldset>
           <legend>CALIBRACIÓN SPL</legend>
-          <p className="amber">{settings.calibration ? 'REFERENCIA GUARDADA' : 'SIN CALIBRAR'}</p>
-          {settings.calibration && (
+          <p className="amber">
+            {settings.calibration
+              ? 'REFERENCIA GUARDADA'
+              : draft.autoCalibrate
+                ? 'AUTO-CALIBRADO ACTIVO'
+                : 'SIN CALIBRAR'}
+          </p>
+          {settings.calibration ? (
             <p className="small">
               {settings.calibration.deviceLabel}
               <br />
               {new Date(settings.calibration.date).toLocaleString()} ·{' '}
-              {settings.calibration.sampleRate} Hz
+              {settings.calibration.sampleRate} Hz · Offset: {settings.calibration.offset.toFixed(1)} dB
             </p>
+          ) : draft.autoCalibrate ? (
+            <p className="small">
+              Estimación acústica automática activa con seguimiento del ruido de fondo ambiental.
+            </p>
+          ) : (
+            <p className="small">La medición se realiza en dBFS digital.</p>
           )}
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={draft.autoCalibrate}
+              onChange={(e) => setDraft({ ...draft, autoCalibrate: e.target.checked })}
+            />
+            <span>Auto-calibración acústica dBA</span>
+          </label>
           <button onClick={onCalibrate}>
             {settings.calibration ? 'RECALIBRAR' : 'CALIBRAR dBA'} ↗
           </button>

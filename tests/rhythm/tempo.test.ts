@@ -17,3 +17,12 @@ it('stabilizes octave jumps, bounds history and changes when evidence persists',
   expect(t.history.length).toBe(6);
   expect(t.update(NaN, 0, 40, 220).confidence).toBe(0);
 });
+it('locks quickly on early detections when rhythmic ticks are present', () => {
+  const t = new TempoTracker();
+  const res1 = t.update(120, 0, 40, 220, 6);
+  expect(res1.stable).toBe(120);
+  expect(res1.confidence).toBeGreaterThan(0.2);
+  const res2 = t.update(120.4, 0, 40, 220, 7);
+  expect(res2.stable).toBeCloseTo(120.2, 1);
+  expect(res2.confidence).toBeGreaterThan(0.4);
+});

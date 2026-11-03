@@ -1,4 +1,5 @@
 import type { Calibration } from '../audio/dsp/calibration';
+
 export interface Settings {
   deviceId: string;
   minBpm: number;
@@ -9,7 +10,9 @@ export interface Settings {
   thresholds: number[];
   splThresholds: number[];
   calibration: Calibration | null;
+  autoCalibrate: boolean;
 }
+
 const defaults: Settings = {
   deviceId: '',
   minBpm: 40,
@@ -20,7 +23,9 @@ const defaults: Settings = {
   thresholds: [-24, -12, -3],
   splThresholds: [80, 90, 100],
   calibration: null,
+  autoCalibrate: true,
 };
+
 export function readSettings(): Settings {
   try {
     const data = JSON.parse(localStorage.getItem('pulso.settings') ?? 'null');
@@ -62,11 +67,13 @@ export function readSettings(): Settings {
         ? data.splThresholds
         : defaults.splThresholds,
       calibration,
+      autoCalibrate: data.autoCalibrate !== false,
     };
   } catch {
     return { ...defaults };
   }
 }
+
 export function saveSettings(settings: Settings): boolean {
   try {
     localStorage.setItem('pulso.settings', JSON.stringify(settings));

@@ -1,7 +1,7 @@
 import { it, expect } from 'vitest';
 import { AWeighting } from '../../src/audio/dsp/weightingA';
 import { dbfs, rms } from '../../src/audio/dsp/levels';
-import { calibrationOffset, matchesCalibration } from '../../src/audio/dsp/calibration';
+import { calibrationOffset, matchesCalibration, AutoCalibrator } from '../../src/audio/dsp/calibration';
 for (const rate of [44100, 48000, 96000])
   it(`A-weighting at ${rate} Hz`, () => {
     for (const [frequency, target] of [
@@ -46,4 +46,16 @@ it('calibration uses energy and rejects unstable, silent or insufficient samples
   expect(matchesCalibration(c, 'a', 48000, 'mic')).toBe(true);
   expect(matchesCalibration(c, 'b', 48000, 'mic')).toBe(false);
   expect(matchesCalibration(c, 'a', 44100, 'mic')).toBe(false);
+});
+it('auto-calibrator converges towards ambient baseline and rejects invalid levels', () => {
+  const auto = new AutoCalibrator(100);
+  expect(auto.offset).toBe(100);
+  auto.update(-62, 1);
+  expect(auto.offset).toBeCloseTo(100, 0);
+  auto.update(NaN, 1);
+  expect(auto.offset).toBeCloseTo(100, 0);
+  for (let i = 0; i < 20; i++) auto.update(-72, 1);
+  expect(auto.offset).toBeGreaterThan(100);
+  auto.reset(100);
+  expect(auto.offset).toBe(100);
 });

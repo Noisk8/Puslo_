@@ -17,6 +17,7 @@ export interface LevelBlock {
   zEnergy: number;
   cPeak: number;
 }
+
 export interface HistoryPoint {
   timestamp: number;
   dbfs: number;
@@ -24,6 +25,7 @@ export interface HistoryPoint {
   bpm: number | null;
   confidence: number;
 }
+
 export interface AudioAnalysisState {
   running: boolean;
   starting: boolean;
@@ -39,6 +41,8 @@ export interface AudioAnalysisState {
   clipEvents: number;
   dba: number | null;
   calibrated: boolean;
+  calibrationMode: 'manual' | 'auto' | 'none';
+  autoOffset: number;
   laeq1m: number | null;
   leqSeconds: number;
   maxLevel: number | null;

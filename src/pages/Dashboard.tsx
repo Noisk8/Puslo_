@@ -14,7 +14,7 @@ export function Dashboard({
   const value = state.calibrated ? state.dba : state.dbfs;
   const thresholds = state.calibrated ? settings.splThresholds : settings.thresholds;
   const severity = state.running ? thresholds.filter((x) => (value ?? -100) >= x).length : 0;
-  const unit = state.calibrated ? 'dBA est.' : 'dBFS';
+  const unit = state.calibrated ? (state.calibrationMode === 'manual' ? 'dBA' : 'dBA est.') : 'dBFS';
   const low = state.calibrated ? 40 : -60,
     high = state.calibrated ? 120 : 0;
   const percent = state.running
@@ -98,7 +98,11 @@ export function Dashboard({
             <div className="panel-label">
               <span>02 — {state.calibrated ? 'SOUND PRESSURE' : 'NIVEL DIGITAL'}</span>
               <span className={state.calibrated ? 'green' : 'amber'}>
-                {state.calibrated ? 'A / CALIBRADO' : 'SPL SIN CALIBRAR'}
+                {state.calibrated
+                  ? state.calibrationMode === 'manual'
+                    ? 'A / CALIBRADO'
+                    : 'A / AUTO-CAL'
+                  : 'SPL SIN CALIBRAR'}
               </span>
             </div>
             <div className={`main-number level-number ${!state.running ? 'idle' : ''}`}>
@@ -142,8 +146,10 @@ export function Dashboard({
                 <span>{settings.response} RESPONSE</span>
                 {!state.calibrated ? (
                   <button onClick={onCalibrate}>CALIBRAR dBA ↗</button>
+                ) : state.calibrationMode === 'manual' && settings.calibration ? (
+                  <span>{new Date(settings.calibration.date).toLocaleDateString()}</span>
                 ) : (
-                  <span>{new Date(settings.calibration!.date).toLocaleDateString()}</span>
+                  <span>AUTO (~{state.autoOffset} dB)</span>
                 )}
               </div>
             </div>

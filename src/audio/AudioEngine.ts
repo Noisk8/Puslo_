@@ -6,7 +6,12 @@ import { readSettings } from '../state/settingsStore';
 import { dbfs } from './dsp/levels';
 import { EnergySmoother } from './dsp/smoothing';
 import { Leq } from './dsp/leq';
-import { calibrationOffset, matchesCalibration, type Calibration } from './dsp/calibration';
+import {
+  calibrationOffset,
+  matchesCalibration,
+  AutoCalibrator,
+  type Calibration,
+} from './dsp/calibration';
 const initial: AudioAnalysisState = {
   running: false,
   starting: false,
@@ -22,6 +27,8 @@ const initial: AudioAnalysisState = {
   clipEvents: 0,
   dba: null,
   calibrated: false,
+  calibrationMode: 'none',
+  autoOffset: 100,
   laeq1m: null,
   leqSeconds: 0,
   maxLevel: null,
@@ -65,6 +72,7 @@ export class AudioEngine {
   private clipUntil = 0;
   private maxDigital = -100;
   private maxA = -100;
+  private autoCalibrator = new AutoCalibrator(100.0);
   readonly microphone = new MicrophoneManager();
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -89,13 +97,23 @@ export class AudioEngine {
       this.historySeconds = 0;
       this.update({ dba: null, laeq1m: null, leqSeconds: 0, maxLevel: null, history: [] });
     }
+    const manualMatches = matchesCalibration(
+      settings.calibration,
+      this.state.deviceId,
+      this.state.sampleRate,
+      this.state.deviceLabel,
+    );
+    const isDebug =
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('debug') === '1';
+    const autoActive =
+      !manualMatches &&
+      (settings.autoCalibrate === true || (settings.autoCalibrate !== false && !isDebug));
+
     this.update({
-      calibrated: matchesCalibration(
-        settings.calibration,
-        this.state.deviceId,
-        this.state.sampleRate,
-        this.state.deviceLabel,
-      ),
+      calibrated: manualMatches || autoActive,
+      calibrationMode: manualMatches ? 'manual' : autoActive ? 'auto' : 'none',
+      autoOffset: this.autoCalibrator.offset,
     });
   }
   async initialize() {
@@ -242,8 +260,37 @@ export class AudioEngine {
     const aLevel = dbfs(Math.sqrt(data.aEnergy));
     const aDisplay = dbfs(Math.sqrt(this.aSmoother.update(data.aEnergy, data.seconds, tau)));
     this.leq.add(data.aEnergy, data.seconds);
-    const offset = this.state.calibrated ? this.settings.calibration!.offset : null;
-    const dba = offset === null ? null : aDisplay + offset;
+
+    this.autoCalibrator.update(aLevel, data.seconds);
+    const autoOffset = this.autoCalibrator.offset;
+
+    const manualMatches = matchesCalibration(
+      this.settings.calibration,
+      this.state.deviceId,
+      this.state.sampleRate,
+      this.state.deviceLabel,
+    );
+    const isDebug =
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('debug') === '1';
+    const autoActive =
+      !manualMatches &&
+      (this.settings.autoCalibrate === true || (this.settings.autoCalibrate !== false && !isDebug));
+
+    let effectiveOffset: number | null = null;
+    let calibrationMode: 'manual' | 'auto' | 'none' = 'none';
+
+    if (manualMatches) {
+      effectiveOffset = this.settings.calibration!.offset;
+      calibrationMode = 'manual';
+    } else if (autoActive) {
+      effectiveOffset = autoOffset;
+      calibrationMode = 'auto';
+    }
+
+    const calibrated = effectiveOffset !== null;
+    const dba = effectiveOffset === null ? null : aDisplay + effectiveOffset;
+
     this.maxDigital = Math.max(this.maxDigital, data.dbfs);
     this.maxA = Math.max(this.maxA, aLevel);
     const clipEvents = this.state.clipEvents + (data.clips > 0 && !this.lastClip ? 1 : 0);
@@ -289,9 +336,9 @@ export class AudioEngine {
           timestamp: elapsed,
           dbfs: dbfs(Math.sqrt(this.historyEnergy / this.historySeconds)),
           dba:
-            offset === null
+            effectiveOffset === null
               ? null
-              : dbfs(Math.sqrt(this.historyAEnergy / this.historySeconds)) + offset,
+              : dbfs(Math.sqrt(this.historyAEnergy / this.historySeconds)) + effectiveOffset,
           bpm,
           confidence,
         },
@@ -306,9 +353,12 @@ export class AudioEngine {
       clipping: elapsed < this.clipUntil,
       clipEvents,
       dba,
-      laeq1m: offset === null ? null : this.leq.level + offset,
+      calibrated,
+      calibrationMode,
+      autoOffset,
+      laeq1m: effectiveOffset === null ? null : this.leq.level + effectiveOffset,
       leqSeconds: this.leq.duration,
-      maxLevel: offset === null ? this.maxDigital : this.maxA + offset,
+      maxLevel: effectiveOffset === null ? this.maxDigital : this.maxA + effectiveOffset,
       elapsed,
       history,
       beat,
