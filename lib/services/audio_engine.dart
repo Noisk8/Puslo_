@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:record/record.dart';
+import 'package:audio_streamer/audio_streamer.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../dsp/a_weighting.dart';
 import '../dsp/calibration.dart';
@@ -77,12 +77,11 @@ class HistoryEntry {
 
 class AudioEngine extends ChangeNotifier {
   final SettingsService settings;
-  final AudioRecorder _recorder = AudioRecorder();
+  AudioStreamer? _streamer;
+  StreamSubscription<List<double>>? _audioSub;
 
   AudioEngineState _state = AudioEngineState();
   AudioEngineState get state => _state;
-
-  StreamSubscription<Uint8List>? _recordSub;
 
   final AWeightingFilter _aFilter = AWeightingFilter(44100);
   final AutoCalibrator _autoCalibrator = AutoCalibrator(100.0);
@@ -117,31 +116,27 @@ class AudioEngine extends ChangeNotifier {
       return false;
     }
 
-    final hasPermission = await _recorder.hasPermission();
-    if (!hasPermission) return false;
-
     await _neuralEngine.initializeModel();
-
     _resetInternals();
 
-    const config = RecordConfig(
-      encoder: AudioEncoder.pcm16bits,
-      sampleRate: _sampleRate,
-      numChannels: 1,
-    );
-
-    final stream = await _recorder.startStream(config);
+    _streamer = AudioStreamer();
     _state = AudioEngineState(isRunning: true, rhythmStatus: 'ready');
     notifyListeners();
 
-    _recordSub = stream.listen(_processPcmChunk);
+    _audioSub = _streamer!.audioStream.listen(
+      _processAudioBuffer,
+      onError: (err) {
+        debugPrint('AudioStreamer error: $err');
+      },
+      cancelOnError: false,
+    );
     return true;
   }
 
   Future<void> stop() async {
-    await _recordSub?.cancel();
-    _recordSub = null;
-    await _recorder.stop();
+    await _audioSub?.cancel();
+    _audioSub = null;
+    _streamer = null;
 
     _state = AudioEngineState(isRunning: false, rhythmStatus: 'off');
     notifyListeners();
@@ -166,21 +161,14 @@ class AudioEngine extends ChangeNotifier {
     _history.clear();
   }
 
-  void _processPcmChunk(Uint8List bytes) {
-    if (!_state.isRunning) return;
+  void _processAudioBuffer(List<double> samples) {
+    if (!_state.isRunning || samples.isEmpty) return;
 
-    // Convertir PCM de 16 bits firmado a muestras en punto flotante [-1.0, 1.0]
-    final ByteData byteData = ByteData.sublistView(bytes);
-    final int sampleCount = bytes.lengthInBytes ~/ 2;
-    if (sampleCount == 0) return;
-
-    final List<double> samples = List<double>.filled(sampleCount, 0.0);
+    final int sampleCount = samples.length;
     final List<double> aSamples = List<double>.filled(sampleCount, 0.0);
 
     for (int i = 0; i < sampleCount; i++) {
-      final int s16 = byteData.getInt16(i * 2, Endian.little);
-      final double s = s16 / 32768.0;
-      samples[i] = s;
+      final double s = samples[i].isFinite ? samples[i] : 0.0;
       aSamples[i] = _aFilter.process(s);
     }
 
@@ -204,7 +192,6 @@ class AudioEngine extends ChangeNotifier {
     _autoCalibrator.update(aDbfs, dt);
     final double autoOffset = _autoCalibrator.offset;
 
-    // Determinar si hay calibración manual o auto-calibración activa
     final bool hasManual = settings.calibration != null;
     final bool autoActive = !hasManual && settings.autoCalibrate;
 
@@ -269,7 +256,7 @@ class AudioEngine extends ChangeNotifier {
         dba: histDba,
         bpm: _state.bpm,
       ));
-      if (_history.length > 900) _history.removeAt(0); // Últimos 15 minutos
+      if (_history.length > 900) _history.removeAt(0);
 
       _historySeconds = 0.0;
       _historyEnergy = 0.0;
@@ -306,7 +293,6 @@ class AudioEngine extends ChangeNotifier {
     _isAnalyzingRhythm = true;
     final bufferCopy = Float32List.fromList(_ringBuffer);
 
-    // Inferencia con motor neuronal / autocorrelación multicaracterística
     final result = _neuralEngine.analyze(
       bufferCopy,
       _sampleRate,
