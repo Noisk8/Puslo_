@@ -27,5 +27,7 @@ export function audioError(error: unknown): string {
   if (name === 'NotAllowedError' || name === 'SecurityError') return 'MICROPHONE_PERMISSION_DENIED';
   if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'NO_AUDIO_INPUT';
   if (name === 'NotReadableError') return 'AUDIO_CONTEXT_FAILED';
+  if (name === 'AbortError') return 'AUDIO_CONTEXT_FAILED';
+  if (name === 'TypeError') return 'UNSUPPORTED_BROWSER';
   return error instanceof Error ? error.message : 'AUDIO_CONTEXT_FAILED';
 }

@@ -40,6 +40,23 @@ test('real worklet signal, WASM tempo, stop and privacy', async ({ page }) => {
   expect(errors).toEqual([]);
   expect(outside).toEqual([]);
 });
+test('project site base serves every entry asset and initializes microphone capture', async ({ page }) => {
+  const failed: string[] = [];
+  page.on('requestfailed', (request) => failed.push(request.url()));
+  await page.goto('/Puslo_/?debug=1');
+  await expect(page.getByRole('button', { name: /INICIAR MICRÓFONO/ })).toBeVisible();
+  const urls = await page.evaluate(() => ({
+    script: document.querySelector('script[type="module"]')?.getAttribute('src'),
+    manifest: document.querySelector('link[rel="manifest"]')?.getAttribute('href'),
+    icon: document.querySelector('link[rel="icon"]')?.getAttribute('href'),
+  }));
+  expect(urls.script).toMatch(/^\/Puslo_\//);
+  expect(urls.manifest).toMatch(/^\/Puslo_\//);
+  expect(urls.icon).toMatch(/^\/Puslo_\//);
+  await page.getByRole('button', { name: /INICIAR MICRÓFONO/ }).click();
+  await expect(page.locator('.debug')).toContainText('"worklet": "running"');
+  expect(failed).toEqual([]);
+});
 test('responsive layout, settings, calibration dialog and offline reload', async ({
   page,
   context,

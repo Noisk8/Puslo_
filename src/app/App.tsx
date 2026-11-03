@@ -12,10 +12,10 @@ import { CalibrationDialog } from '../components/CalibrationDialog';
 import '../styles/globals.css';
 const errors: Record<string, string> = {
   MICROPHONE_PERMISSION_DENIED:
-    'Permiso de micrófono rechazado. Habilítalo en los ajustes del sitio y vuelve a iniciar.',
+    'El navegador bloqueó el micrófono. Revisa el permiso de este sitio y que la página esté abierta en HTTPS; después vuelve a iniciar.',
   NO_AUDIO_INPUT: 'No se encontró la entrada seleccionada. Elige otro micrófono en configuración.',
   AUDIO_CONTEXT_FAILED:
-    'No se pudo abrir el audio. Revisa si otra aplicación está usando el dispositivo.',
+    'No se pudo iniciar la captura de audio. Comprueba que el micrófono no esté ocupado y vuelve a intentarlo.',
   WORKLET_LOAD_FAILED: 'No se pudo cargar el procesador de audio. Recarga la aplicación.',
   ESSENTIA_LOAD_FAILED:
     'No se pudo cargar Essentia. El medidor sigue disponible; reinicia la captura para reintentar BPM.',
