@@ -239,16 +239,10 @@ class DashboardScreen extends StatelessWidget {
                   SizedBox(
                     height: 54,
                     child: ElevatedButton(
-                      style: ElevatedButton.styleKey(
-                        style: ButtonStyle(
-                          backgroundColor: WidgetStateProperty.all(
-                            state.isRunning ? TerminalTheme.red : TerminalTheme.green,
-                          ),
-                          foregroundColor: WidgetStateProperty.all(TerminalTheme.background),
-                          shape: WidgetStateProperty.all(
-                            RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
-                          ),
-                        ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: state.isRunning ? TerminalTheme.red : TerminalTheme.green,
+                        foregroundColor: TerminalTheme.background,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
                       ),
                       onPressed: () {
                         if (state.isRunning) {
@@ -333,6 +327,3 @@ class DashboardScreen extends StatelessWidget {
   }
 }
 
-extension ButtonStyleExtension on ElevatedButton {
-  static ButtonStyle styleKey({required ButtonStyle style}) => style;
-}
