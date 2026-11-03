@@ -1,13 +1,21 @@
 export interface LevelBlock {
   rms: number;
   dbfs: number;
-  aEnergy: number;
   peak: number;
   clips: number;
   seconds: number;
   time: number;
   onset: boolean;
   dropped: number;
+  laf: number;
+  las: number;
+  lafMax: number;
+  lafMin: number;
+  lasMax: number;
+  aEnergy: number;
+  cEnergy: number;
+  zEnergy: number;
+  cPeak: number;
 }
 export interface HistoryPoint {
   timestamp: number;

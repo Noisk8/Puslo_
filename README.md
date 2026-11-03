@@ -102,7 +102,12 @@ El beat no es una animación CSS periódica: reacciona a transitorios de energí
 
 **dBFS** es nivel digital respecto a full scale: `20 log10(rms)`, con floor −100. No representa presión acústica. El pico siempre se identifica como **PEAK DIGITAL / dBFS**; no se convierte en un pico SPL sin definir ponderación y calibración apropiadas.
 
-La ponderación A utiliza los polos analógicos publicados para IEC 61672: 20.598997 Hz (doble), 107.65265 Hz, 737.86223 Hz y 12194.217 Hz (doble). Se transforman por bilineal a tres secciones de segundo orden, normalizadas a 1 kHz para el sample rate real. Fuente y metodología: [MathWorks, frequency-weighted filter](https://www.mathworks.com/help/audio/ref/weightingfilter-system-object.html). El filtro tiene deformación frecuencial cerca de Nyquist; **esto no constituye validación ni certificación IEC**.
+Las ponderaciones A y C utilizan los polos analógicos publicados para IEC 61672 y se transforman
+por bilineal a secciones de segundo orden, normalizadas a 1 kHz para el sample rate real. Z es
+plana. El detector Fast (125 ms) y Slow (1 s) se integran por muestra en el AudioWorklet; los
+bloques de UI son solo transporte. La deformación de la transformada bilineal, especialmente
+cerca de Nyquist, aún requiere un informe de comparación completo contra la tabla nominal y no
+constituye validación ni certificación IEC. Todas las lecturas acústicas son indicativas.
 
 Para calibrar:
 
